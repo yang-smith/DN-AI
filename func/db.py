@@ -56,7 +56,13 @@ def init_db():
         collection = chroma_client.create_collection(name="chat_collection", embedding_function=em)
     except:  # already exist collection
         collection = chroma_client.get_collection(name="chat_collection", embedding_function=em)
-    return collection
+
+    try:
+        collection_DN = chroma_client.create_collection(name="DN_collection", embedding_function=em)
+    except:  # already exist collection
+        collection_DN = chroma_client.get_collection(name="DN_collection", embedding_function=em)
+
+    return collection,collection_DN
 
 # chat_records = read_chat_records()
 # id = 0
@@ -112,71 +118,76 @@ def get_records_by_similar_search(collection, user_input, n_results=10):
     # print(formatted_output)
     return formatted_output
 
+def get_document_by_similar_search(collection, user_input, n_results=5):
+    results = collection.query(
+    query_texts=[user_input],
+    n_results=n_results
+    )
+    data = results
+    formatted_output = ""
+    for i in range(len(data['ids'][0])):
+        document = data['documents'][0][i]
+        formatted_output += f"{document}\n"
 
-# collection = init_db()
-
-
-
-
-
-from langchain_community.document_loaders import DirectoryLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-
-source_urls = {
-    'base.md': 'https://docs.qq.com/doc/DZGllZ1h5UU1ITlZk',
-    'dianping.md': 'https://docs.qq.com/doc/DWWpkb0FqY0NiWXlT', 
-    'whatisDN.md': 'http://example.com/whatisDN',
-    'yucun.md': 'https://docs.qq.com/doc/DWVRPeVpGb0xJWVlr'
-}
-
-loader = DirectoryLoader('./documents', glob="**/*.md")
-docs = loader.load()
-for doc in docs:
-    metadata = doc.metadata
-    filename = metadata['source'].replace('documents\\', '')
-    metadata['source'] = source_urls[filename]
-    
-# print(docs)
-
-text_splitter = RecursiveCharacterTextSplitter(
-    # Set a really small chunk size, just to show.
-    chunk_size=500,
-    chunk_overlap=20,
-    length_function=len,
-    is_separator_regex=False,
-)
-
-texts = text_splitter.split_documents(docs)
-# print(texts)
-for text in texts:
-    print(text)
+    # print(formatted_output)
+    return formatted_output
 
 
-em = embedding_functions.SentenceTransformerEmbeddingFunction(model_name="shibing624/text2vec-base-chinese")
+collection, collection_DN = init_db()
 
-chroma_client = chromadb.PersistentClient("./chroma")
-try:
-    collection_DN = chroma_client.create_collection(name="DN_collection", embedding_function=em)
-except:  # already exist collection
-    collection_DN = chroma_client.get_collection(name="DN_collection", embedding_function=em)
 
-# id = 0
-# for text in texts:
-#     collection_DN.upsert(
-#         documents=[text.page_content],
-#         metadatas=[text.metadata],
-#         ids=[str(id)]
-#     )
-#     id+=1
 
-while 1:
-    user_input = input("问点什么：")
-    if user_input == "exit":
-        break
-    results = collection_DN.query(
-        query_texts=[user_input],
-        n_results=5
+
+def add_DN_documents():
+    from langchain_community.document_loaders import DirectoryLoader
+    from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+    source_urls = {
+        'base.md': 'https://docs.qq.com/doc/DZGllZ1h5UU1ITlZk',
+        'dianping.md': 'https://docs.qq.com/doc/DWWpkb0FqY0NiWXlT', 
+        'whatisDN.md': 'http://example.com/whatisDN',
+        'yucun.md': 'https://docs.qq.com/doc/DWVRPeVpGb0xJWVlr'
+    }
+
+    loader = DirectoryLoader('./documents', glob="**/*.md")
+    docs = loader.load()
+    for doc in docs:
+        metadata = doc.metadata
+        filename = metadata['source'].replace('documents\\', '')
+        metadata['source'] = source_urls[filename]
+        
+    # print(docs)
+
+    text_splitter = RecursiveCharacterTextSplitter(
+        # Set a really small chunk size, just to show.
+        chunk_size=300,
+        chunk_overlap=100,
+        length_function=len,
+        is_separator_regex=False,
     )
 
-    print(results)
-    # print(re_string(results))
+    texts = text_splitter.split_documents(docs)
+    # print(texts)
+    for text in texts:
+        print(text)
+
+    em = embedding_functions.SentenceTransformerEmbeddingFunction(model_name="shibing624/text2vec-base-chinese")
+
+    chroma_client = chromadb.PersistentClient("./chroma")
+    # chroma_client.delete_collection(name="DN_collection")
+    try:
+        collection_DN = chroma_client.create_collection(name="DN_collection", embedding_function=em)
+    except:  # already exist collection
+        collection_DN = chroma_client.get_collection(name="DN_collection", embedding_function=em)
+
+    id = 0
+    for text in texts:
+        collection_DN.upsert(
+            documents=[text.page_content],
+            metadatas=[text.metadata],
+            ids=[str(id)]
+        )
+        id+=1
+    print("done")
+# add_DN_documents()
+

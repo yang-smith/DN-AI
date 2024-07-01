@@ -1,7 +1,7 @@
 
 import os
 from openai import OpenAI
-from prompt import prompt_sys
+from func.prompt import prompt_sys, prompt_tools
 def ai_chat(message, model="gpt-3.5-turbo"):
     client = OpenAI(
         # This is the default and can be omitted
@@ -32,7 +32,7 @@ def ai_chat(message, model="gpt-3.5-turbo"):
 import json
 import os
 from openai import OpenAI
-from db import get_records_by_similar_search, get_records_by_time, collection
+from func.db import get_document_by_similar_search, get_records_by_similar_search, get_records_by_time, collection,collection_DN
 
 
 
@@ -43,6 +43,9 @@ def get_record_by_time(start, end):
 def get_record_by_similar_search(user_input):
     return get_records_by_similar_search(collection=collection, user_input=user_input, n_results=10)
 
+def get_information_from_documents(user_input):
+    return get_document_by_similar_search(collection=collection_DN, user_input=user_input, n_results=4)
+
 def run_conversation(message, model="gpt-4o"):
     client = OpenAI(
     api_key=os.environ.get("OPENAI_API_KEY"),
@@ -51,7 +54,7 @@ def run_conversation(message, model="gpt-4o"):
     messages=[
             {
                 "role": "system", 
-                "content": prompt_sys
+                "content": prompt_tools
             },
             {
                 "role": "user",
@@ -88,6 +91,20 @@ def run_conversation(message, model="gpt-4o"):
                 },
             },
         },
+        {
+            "type": "function",
+            "function": {
+                "name": "get_information_from_documents",
+                "description": "Retrieve relevant information from documents",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "user_input": {"type": "string", "description": "multi Search query from different dimensions"},
+                    },
+                    "required": ["user_input"],
+                },
+            },
+        },
     ]
     response = client.chat.completions.create(
         model=model,
@@ -103,34 +120,29 @@ def run_conversation(message, model="gpt-4o"):
         available_functions = {
             "get_record_by_time": get_record_by_time,
             "get_record_by_similar_search": get_record_by_similar_search,
+            "get_information_from_documents": get_information_from_documents,
         }
-        messages.append(response_message)
+        # messages.append(response_message)
         for tool_call in tool_calls:
             function_name = tool_call.function.name
-            function_to_call = available_functions[function_name]
-            function_args = json.loads(tool_call.function.arguments)
-            # if function_to_call == 'get_record_by_time':
-            #     function_response = function_to_call(**function_args)
-            #     print(len(function_response))
-            #     if len(function_response) > 8000:
-            #         print("get_record_by_time too long")
-            #     else:
-            #         messages.append({
-            #             "tool_call_id": tool_call.id,
-            #             "role": "tool",
-            #             "name": function_name,
-            #             "content": function_response,
-            #         })
-            #     continue
-            function_response = function_to_call(**function_args)
-            # print(function_response)
-            messages.append({
-                "tool_call_id": tool_call.id,
-                "role": "tool",
-                "name": function_name,
-                "content": function_response,
-            })
-
+            if function_name == "get_information_from_documents":
+                function_to_call = available_functions[function_name]
+                function_args = json.loads(tool_call.function.arguments)
+                function_response = function_to_call(**function_args)
+                messages[1]["content"] += f"\n 文档的参考信息:{function_response}\n"
+            else:
+                function_to_call = available_functions[function_name]
+                function_args = json.loads(tool_call.function.arguments)
+                function_response = function_to_call(**function_args)
+                messages[1]["content"] += f"\n 在地群聊天记录:{function_response}\n"
+            # messages.append({
+            #     "tool_call_id": tool_call.id,
+            #     "role": "tool",
+            #     "name": function_name,
+            #     "content": function_response,
+            # })
+        messages[0]['content'] = prompt_sys
+        print(messages)
         second_response = client.chat.completions.create(
             model=model,
             messages=messages,

@@ -1,6 +1,6 @@
-from ai import ai_chat, run_conversation
-from prompt import prompt_sys, prompt_chat
-from db import collection
+from func.ai import ai_chat, run_conversation
+from func.prompt import prompt_sys, prompt_chat, prompt_test
+from func.db import collection, collection_DN, get_document_by_similar_search
 
 
 
@@ -26,3 +26,16 @@ while 1:
     # ai_response = ai_chat(message=message, model='gpt-4o')
     ai_response = run_conversation(message=message)
     print(ai_response)
+
+
+# while 1:
+#     user_input = input("问点什么：")
+#     if user_input == "exit":
+#         break
+#     results = get_document_by_similar_search(collection_DN, user_input, 4)
+#     # print(results)
+#     # print(re_string(results))
+#     message = prompt_test(question=user_input,ducument=results)
+#     print(message)
+#     ai_response = ai_chat(message=message, model="gpt-4o")
+#     print(ai_response)
