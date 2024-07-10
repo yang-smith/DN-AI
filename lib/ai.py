@@ -1,7 +1,7 @@
 
 import os
 from openai import OpenAI
-from func.prompt import prompt_sys, prompt_tools
+from lib.prompt import prompt_sys, prompt_tools
 def ai_chat(message, model="gpt-3.5-turbo"):
     client = OpenAI(
         # This is the default and can be omitted
@@ -32,7 +32,7 @@ def ai_chat(message, model="gpt-3.5-turbo"):
 import json
 import os
 from openai import OpenAI
-from func.db import get_document_by_similar_search, get_records_by_similar_search, get_records_by_time, collection,collection_DN
+from lib.db import get_document_by_similar_search, get_records_by_similar_search, get_records_by_time, collection,collection_DN
 
 
 

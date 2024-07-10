@@ -1,6 +1,6 @@
-from func.ai import ai_chat, run_conversation
-from func.prompt import prompt_sys, prompt_chat, prompt_test
-from func.db import collection, collection_DN, get_document_by_similar_search
+from lib.ai import ai_chat, run_conversation
+from lib.prompt import prompt_sys, prompt_chat, prompt_test
+from lib.db import collection, collection_DN, get_document_by_similar_search
 
 
 

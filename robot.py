@@ -9,23 +9,22 @@ from threading import Thread
 
 from wcferry import Wcf, WxMsg
 
-from func.func_chatgpt import ChatGPT
-from job_mgmt import Job
+from lib.func_chatgpt import ChatGPT
+# from job_mgmt import Job
 
 __version__ = "39.0.10.1"
 
 
-class Robot(Job):
+class Robot():
     """个性化自己的机器人
     """
 
-    def __init__(self, config: Config, wcf: Wcf, chat_type: int) -> None:
+    def __init__(self, wcf: Wcf, chat_type: int) -> None:
         self.wcf = wcf
-        self.config = config
         self.LOG = logging.getLogger("Robot")
         self.wxid = self.wcf.get_self_wxid()
         self.allContacts = self.getAllContacts()
-        self.chat = ChatGPT(self.config.CHATGPT)
+        self.chat = ChatGPT()
         self.LOG.info(f"已选择: {self.chat}")
 
     @staticmethod
@@ -40,17 +39,6 @@ class Robot(Job):
         :return: 处理状态，`True` 成功，`False` 失败
         """
         return self.toChitchat(msg)
-
-    def toChengyu(self, msg: WxMsg) -> bool:
-        """
-        处理成语查询/接龙消息
-        :param msg: 微信消息结构
-        :return: 处理状态，`True` 成功，`False` 失败
-        """
-        status = False
-
-
-        return status
 
     def toChitchat(self, msg: WxMsg) -> bool:
         """闲聊，接入 ChatGPT
@@ -91,7 +79,8 @@ class Robot(Job):
                 self.toAt(msg)
 
             else:  # 其他消息
-                self.toChengyu(msg)
+                # add to msg deque
+                self.sendTextMsg("aha", msg.roomid, msg.sender)
 
             return  # 处理完群聊信息，后面就不需要处理了
 
@@ -197,11 +186,3 @@ class Robot(Job):
             self.allContacts[msg.sender] = nickName[0]
             self.sendTextMsg(f"Hi {nickName[0]}，我自动通过了你的好友请求。", msg.sender)
 
-    def newsReport(self) -> None:
-        receivers = self.config.NEWS
-        if not receivers:
-            return
-
-        news = News().get_important_news()
-        for r in receivers:
-            self.sendTextMsg(news, r)

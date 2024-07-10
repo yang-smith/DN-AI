@@ -7,8 +7,9 @@ import os
 
 import httpx
 from openai import APIConnectionError, APIError, AuthenticationError, OpenAI
-from prompt import prompt_sys, prompt_tools, prompt_start
-
+from prompt import prompt_chat, prompt_sys, prompt_tools, prompt_start
+from collections import deque
+import ai_db
 class ChatGPT():
     def __init__(self) -> None:
         self.LOG = logging.getLogger("ChatGPT")
@@ -36,14 +37,9 @@ class ChatGPT():
         self.updateMessage(wxid, question, "user")
         rsp = ""
         try:
-            # ret = self.client.chat.completions.create(model=self.model,
-            #                                           messages=self.conversation_list[wxid],
-            #                                           temperature=0.2)
-            # rsp = ret.choices[0].message.content
-            # rsp = rsp[2:] if rsp.startswith("\n\n") else rsp
-            # rsp = rsp.replace("\n\n", "\n")
             rsp = run_conversation(self.client, message=self.conversation_list[wxid])
             self.updateMessage(wxid, rsp, "assistant")
+            print(self.conversation_list[wxid])
         except AuthenticationError:
             self.LOG.error("OpenAI API 认证失败，请检查 API 密钥是否正确")
         except APIConnectionError:
@@ -55,34 +51,17 @@ class ChatGPT():
 
         return rsp
 
+
+
     def updateMessage(self, wxid: str, question: str, role: str) -> None:
-        now_time = str(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
-        time_mk = "当需要回答时间时请直接参考回复:"
-        # 初始化聊天记录,组装系统信息
-        if wxid not in self.conversation_list.keys():
-            question_ = [
+        # 如果不存在对话列表，则初始化
+        if wxid not in self.conversation_list:
+            self.conversation_list[wxid] = deque([
                 self.system_content_msg,
-                {"role": "system", "content": "" + time_mk + now_time}
-            ]
-            self.conversation_list[wxid] = question_
+            ], maxlen=10)  
 
-        # 当前问题
-        content_question_ = {"role": role, "content": question}
-        self.conversation_list[wxid].append(content_question_)
-
-        for cont in self.conversation_list[wxid]:
-            if cont["role"] != "system":
-                continue
-            if cont["content"].startswith(time_mk):
-                cont["content"] = time_mk + now_time
-
-        # 只存储10条记录，超过滚动清除
-        i = len(self.conversation_list[wxid])
-        if i > 10:
-            print("滚动清除微信记录：" + wxid)
-            # 删除多余的记录，倒着删，且跳过第一个的系统消息
-            del self.conversation_list[wxid][1]
+        self.conversation_list[wxid].append({"role": role, "content": question})
 
 import json
 import os
@@ -92,7 +71,6 @@ from db import get_document_by_similar_search, get_records_by_similar_search, ge
 
 
 def get_record_by_time(start, end):
-    # collection = init_db()
     return get_records_by_time(collection=collection, start=start, end=end)
 
 def get_record_by_similar_search(user_input):
@@ -166,6 +144,7 @@ def run_conversation(client, message, model="gpt-4o"):
     response_message = response.choices[0].message
     print(response)
     tool_calls = response_message.tool_calls
+    second_message = prompt_chat(messages[1]["content"])
 
     if tool_calls:
         available_functions = {
@@ -173,33 +152,29 @@ def run_conversation(client, message, model="gpt-4o"):
             "get_record_by_similar_search": get_record_by_similar_search,
             "get_information_from_documents": get_information_from_documents,
         }
-        # messages.append(response_message)
         for tool_call in tool_calls:
             function_name = tool_call.function.name
             if function_name == "get_information_from_documents":
                 function_to_call = available_functions[function_name]
                 function_args = json.loads(tool_call.function.arguments)
                 function_response = function_to_call(**function_args)
-                messages[1]["content"] += f"\n 文档的参考信息:{function_response}\n"
+                second_message += f"\n 文档的参考信息:{function_response}\n"
             else:
                 function_to_call = available_functions[function_name]
                 function_args = json.loads(tool_call.function.arguments)
                 function_response = function_to_call(**function_args)
-                messages[1]["content"] += f"\n 在地群聊天记录:{function_response}\n"
-            # messages.append({
-            #     "tool_call_id": tool_call.id,
-            #     "role": "tool",
-            #     "name": function_name,
-            #     "content": function_response,
-            # })
-        # messages[0]['content'] = prompt_sys
-        message.append(messages[1])
-        print(message)
-        second_response = client.chat.completions.create(
-            model=model,
-            messages=message,
-        )
-        return second_response.choices[0].message.content
+                second_message += f"\n 在地群聊天记录:{function_response}\n"
+
+    message.append({
+            "role": "user",
+            "content": second_message,
+        })
+    print(message)
+    second_response = client.chat.completions.create(
+        model=model,
+        messages=message,
+    )
+    return second_response.choices[0].message.content
 
 
 
