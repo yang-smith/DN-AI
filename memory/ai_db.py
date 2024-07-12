@@ -2,11 +2,11 @@
 import json
 import os
 from openai import OpenAI
-from lib.db import get_document_by_similar_search, get_records_by_similar_search, get_records_by_time, collection,collection_DN
+from memory.vector_db import get_document_by_similar_search, get_records_by_similar_search, get_records_by_time, collection,collection_DN
 import logging
 from datetime import datetime
 
-from lib.prompt import prompt_chat, prompt_sys, prompt_tools, prompt_start
+from memory.prompt import prompt_chat, prompt_sys, prompt_tools, prompt_start
 from collections import deque
 
 tools = [
@@ -64,7 +64,9 @@ def get_record_by_similar_search(user_input):
 def get_information_from_documents(user_input):
     return get_document_by_similar_search(collection=collection_DN, user_input=user_input, n_results=4)
 
-def run_conversation(client, message, model="gpt-4-turbo-2024-04-09"):
+def get_information(client, message, model="gpt-4-turbo-2024-04-09"):
+    """获取辅助信息"""
+    message += f"\n 辅助信息：现在是 {datetime.now().strftime('%Y-%m-%d %H:%M')}"
     messages=[
             {
                 "role": "system", 
@@ -110,23 +112,7 @@ def run_conversation(client, message, model="gpt-4-turbo-2024-04-09"):
     return second_message
 
 
+def check_information():
+    """检查获取到的辅助信息是否过多或者包含无效信息"""
+    return
 
-if __name__ == "__main__":
-
-    client = OpenAI(
-                api_key=os.environ.get("OPENAI_API_KEY"),
-                base_url=os.environ.get("OPENAI_API_BASE"),
-            )
-    while 1:
-        user_input = input("问点什么：")
-        if user_input == "exit":
-            break
-        # message = prompt_chat(question=user_input)
-        # print(message)
-        time_start = datetime.now()  
-
-        ai_response = run_conversation(client, message=user_input)
-        print(ai_response)
-
-        time_end = datetime.now() 
-        print(f"{round((time_end - time_start).total_seconds(), 2)}s") 

@@ -7,9 +7,10 @@ import os
 
 import httpx
 from openai import APIConnectionError, APIError, AuthenticationError, OpenAI
-from prompt import prompt_chat, prompt_sys, prompt_tools, prompt_start
+from lib.prompt import prompt_chat, prompt_sys, prompt_tools, prompt_start
 from collections import deque
-import ai_db
+import lib.ai_db
+
 class ChatGPT():
     def __init__(self) -> None:
         self.LOG = logging.getLogger("ChatGPT")
@@ -66,7 +67,7 @@ class ChatGPT():
 import json
 import os
 from openai import OpenAI
-from db import get_document_by_similar_search, get_records_by_similar_search, get_records_by_time, collection,collection_DN
+from lib.db import get_document_by_similar_search, get_records_by_similar_search, get_records_by_time, collection,collection_DN
 
 
 
