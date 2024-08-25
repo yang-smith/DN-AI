@@ -1,33 +1,128 @@
 
 import os
 from openai import OpenAI
+import tiktoken
 from lib.prompt import prompt_sys, prompt_tools
-def ai_chat(message, model="gpt-3.5-turbo"):
+
+import os
+import httpx
+from aiolimiter import AsyncLimiter
+import asyncio
+
+limiter = AsyncLimiter(4, 1)  # 每秒最多4个请求
+
+async def ai_chat_async(message, model="gpt-4o-mini", response_format='NOT_GIVEN', retries=3):
+    timeout = httpx.Timeout(20.0, read=30.0)  
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        messages = [
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": message}
+        ]
+
+        params = {
+            "messages": messages,
+            "model": model,
+            "temperature": 0.05,
+        }
+
+        headers = {
+            "Authorization": f"Bearer {os.environ.get('OPENAI_API_KEY')}"
+        }
+
+        if response_format == 'json':
+            params["response_format"] = {"type": "json_object"}
+
+        url = os.environ.get("OPENAI_API_BASE", "https://api.openai.com/v1") + "/chat/completions"
+
+        for attempt in range(retries + 1):
+            try:
+                # 使用速率限制
+                async with limiter:
+                    response = await client.post(url, json=params, headers=headers)
+                response.raise_for_status()
+                data = response.json()
+                return data['choices'][0]['message']['content']
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code == 429:  # 处理请求过多的情况
+                    await asyncio.sleep((2 ** attempt) * 60)  # 指数级退避
+                elif e.response.status_code >= 500:  # 处理服务器错误
+                    await asyncio.sleep(2 ** attempt)  # 短暂退避
+                else:
+                    raise  # 其他错误不重试
+            except (httpx.TimeoutException, httpx.NetworkError):
+                if attempt < retries:
+                    await asyncio.sleep(2 ** attempt)  # 网络问题的指数级退避
+                else:
+                    raise  
+
+def ai_chat(message, model="gpt-3.5-turbo", response_format = 'NOT_GIVEN'):
     client = OpenAI(
         # This is the default and can be omitted
         api_key=os.environ.get("OPENAI_API_KEY"),
         base_url=os.environ.get("OPENAI_API_BASE"),
     )
-
-    chat_completion = client.chat.completions.create(
-        messages=[
-            {
-                "role": "system", 
-                "content": prompt_sys
-            },
-            {
-                "role": "user",
-                "content": message,
-            }
-        ],
-        model=model,
-    )
-
-    # print(chat_completion.choices[0].message.content)
+    messages=[
+        {
+            "role": "system", 
+            "content": "You are a helpful assitant."
+        },
+        {
+            "role": "user",
+            "content": message,
+        }
+    ]
+    if response_format == 'json':
+        chat_completion = client.chat.completions.create(
+            messages=messages,
+            response_format=  { "type": "json_object" },
+            model=model,
+            temperature=0.05
+        )
+    else:
+        chat_completion = client.chat.completions.create(
+            messages=messages,
+            model=model,
+            temperature=0.05
+        )
     return chat_completion.choices[0].message.content
 
 
 
+def ai_long_chat(messages, model="gpt-3.5-turbo", response_format = 'NOT_GIVEN'):
+    client = OpenAI(
+        # This is the default and can be omitted
+        api_key=os.environ.get("OPENAI_API_KEY"),
+        base_url=os.environ.get("OPENAI_API_BASE"),
+    )
+    if response_format == 'json':
+        chat_completion = client.chat.completions.create(
+            messages=messages,
+            response_format=  { "type": "json_object" },
+            model=model,
+            temperature=0.05
+        )
+    else:
+        chat_completion = client.chat.completions.create(
+            messages=messages,
+            model=model,
+            temperature=0.05
+        )
+    return chat_completion.choices[0].message.content
+
+def num_tokens_from_string(string: str, encoding_name: str = "cl100k_base") -> int:
+    """Returns the number of tokens in a text string."""
+    encoding = tiktoken.get_encoding(encoding_name)
+    num_tokens = len(encoding.encode(string))
+    return num_tokens
+
+def truncate_list_by_token_size(list_data: list,max_token_size: int):
+    """Truncate a list of data by token size"""
+    tokens = 0
+    for i, data in enumerate(list_data):
+        tokens += num_tokens_from_string(data)
+        if tokens > max_token_size:
+            return list_data[:i]
+    return list_data
 
 import json
 import os

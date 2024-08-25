@@ -10,6 +10,8 @@ from threading import Thread
 from wcferry import Wcf, WxMsg
 
 from lib.func_chatgpt import ChatGPT
+from memory.query import query
+import memory
 # from job_mgmt import Job
 
 __version__ = "39.0.10.1"
@@ -19,13 +21,12 @@ class Robot():
     """个性化自己的机器人
     """
 
-    def __init__(self, wcf: Wcf, chat_type: int) -> None:
+    def __init__(self, wcf: Wcf) -> None:
         self.wcf = wcf
         self.LOG = logging.getLogger("Robot")
         self.wxid = self.wcf.get_self_wxid()
         self.allContacts = self.getAllContacts()
         self.chat = ChatGPT()
-        self.LOG.info(f"已选择: {self.chat}")
 
     @staticmethod
     def value_check(args: dict) -> bool:
@@ -40,14 +41,15 @@ class Robot():
         """
         return self.toChitchat(msg)
 
-    def toChitchat(self, msg: WxMsg) -> bool:
+    async def toChitchat(self, msg: WxMsg) -> bool:
         """闲聊，接入 ChatGPT
         """
-        if not self.chat:  # 没接 ChatGPT，固定回复
+        if not self.chat: 
             rsp = "你@我干嘛？"
-        else:  # 接了 ChatGPT，智能回复
+        else: 
             q = re.sub(r"@.*?[\u2005|\s]", "", msg.content).replace(" ", "")
             rsp = self.chat.get_answer(q, (msg.roomid if msg.from_group() else msg.sender))
+            rsp = await query((msg.roomid if msg.from_group() else msg.sender),q,memory.base_graph, model='gpt-4o-2024-08-06')
 
         if rsp:
             if msg.from_group():

@@ -78,3 +78,36 @@ def prompt_test(question, ducument):
         {question}
         """
     return prompt
+
+def prompt_keyword(n):
+    prompt = f"""
+    - Role: You're a question analyzer. 
+    - Requirements: 
+    - Summarize user's question, and give top {n} important keyword/phrase.
+    - Use comma as a delimiter to separate keywords/phrases.
+    - Answer format: (in language of user's question)
+    - keyword: 
+    """
+    return prompt
+
+def rewrite():
+    prompt = """
+        You are an expert at query expansion to generate a paraphrasing of a question.
+        I can't retrieval relevant information from the knowledge base by using user's question directly.     
+        You need to expand or paraphrase user's question by multiple ways such as using synonyms words/phrase, 
+        writing the abbreviation in its entirety, adding some extra descriptions or explanations, 
+        changing the way of expression, translating the original question into another language (English/Chinese), etc. 
+        And return 5 versions of question and one is from translation.
+        Just list the question. No other words are needed.
+    """
+    return prompt
+
+system = """你是一个智能助手，请总结知识库的内容来回答问题，请列举知识库中的数据详细回答。当所有知识库内容都与问题无关时，你的回答必须包括“知识库中未找到您要的答案！”这句话。回答需要考虑聊天历史。
+以下是知识库：
+{knowledge}
+以上是知识库。"""
+
+"""
+Please summarize the following paragraphs(in language of the following paragraphs). Be careful with the numbers, do not make things up. Paragraphs as following:
+      {cluster_content}
+The above is the content you need to summarize."""

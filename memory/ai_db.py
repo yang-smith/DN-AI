@@ -6,7 +6,7 @@ from memory.vector_db import get_document_by_similar_search, get_records_by_simi
 import logging
 from datetime import datetime
 
-from memory.prompt import prompt_chat, prompt_sys, prompt_tools, prompt_start
+from memory.prompt.prompt import prompt_chat, prompt_sys, prompt_tools, prompt_start
 from collections import deque
 
 tools = [
