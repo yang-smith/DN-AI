@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import asyncio
 import logging
 import re
 import time
@@ -7,6 +8,7 @@ import xml.etree.ElementTree as ET
 from queue import Empty
 from threading import Thread
 
+import schedule
 from wcferry import Wcf, WxMsg
 
 from lib.func_chatgpt import ChatGPT
@@ -48,7 +50,7 @@ class Robot():
             rsp = "你@我干嘛？"
         else: 
             q = re.sub(r"@.*?[\u2005|\s]", "", msg.content).replace(" ", "")
-            rsp = self.chat.get_answer(q, (msg.roomid if msg.from_group() else msg.sender))
+            # rsp = self.chat.get_answer(q, (msg.roomid if msg.from_group() else msg.sender))
             rsp = await query((msg.roomid if msg.from_group() else msg.sender),q,memory.base_graph, model='gpt-4o-2024-08-06')
 
         if rsp:
@@ -62,7 +64,7 @@ class Robot():
             self.LOG.error(f"无法从 ChatGPT 获得答案")
             return False
 
-    def processMsg(self, msg: WxMsg) -> None:
+    async def processMsg(self, msg: WxMsg) -> None:
         """当接收到消息的时候，会调用本方法。如果不实现本方法，则打印原始消息。
         此处可进行自定义发送的内容,如通过 msg.content 关键字自动获取当前天气信息，并发送到对应的群组@发送者
         群号：msg.roomid  微信ID：msg.sender  消息内容：msg.content
@@ -74,15 +76,15 @@ class Robot():
         # 群聊消息
         if msg.from_group():
             # 如果在群里被 @
-            if msg.roomid not in self.config.GROUPS:  # 不在配置的响应的群列表里，忽略
-                return
+            # if msg.roomid not in self.config.GROUPS:  # 不在配置的响应的群列表里，忽略
+            #     return
 
             if msg.is_at(self.wxid):  # 被@
-                self.toAt(msg)
+                await self.toChitchat(msg)
 
-            else:  # 其他消息
-                # add to msg deque
-                self.sendTextMsg("aha", msg.roomid, msg.sender)
+            # else:  # 其他消息
+            #     # add to msg deque
+            #     self.sendTextMsg("aha", msg.roomid, msg.sender)
 
             return  # 处理完群聊信息，后面就不需要处理了
 
@@ -100,7 +102,7 @@ class Robot():
                     self.config.reload()
                     self.LOG.info("已更新")
             else:
-                self.toChitchat(msg)  # 闲聊
+                await self.toChitchat(msg)  # 闲聊
 
     def onMsg(self, msg: WxMsg) -> int:
         try:
@@ -114,20 +116,21 @@ class Robot():
     def enableRecvMsg(self) -> None:
         self.wcf.enable_recv_msg(self.onMsg)
 
-    def enableReceivingMsg(self) -> None:
-        def innerProcessMsg(wcf: Wcf):
+    async def enableReceivingMsg(self) -> None:
+        async def innerProcessMsg(wcf: Wcf):
             while wcf.is_receiving_msg():
                 try:
                     msg = wcf.get_msg()
                     self.LOG.info(msg)
-                    self.processMsg(msg)
+                    await self.processMsg(msg)
                 except Empty:
                     continue  # Empty message
                 except Exception as e:
                     self.LOG.error(f"Receiving message error: {e}")
 
         self.wcf.enable_receiving_msg()
-        Thread(target=innerProcessMsg, name="GetMessage", args=(self.wcf,), daemon=True).start()
+        task = asyncio.create_task(innerProcessMsg(self.wcf))
+        await task
 
     def sendTextMsg(self, msg: str, receiver: str, at_list: str = "") -> None:
         """ 发送消息
@@ -187,4 +190,7 @@ class Robot():
             # 添加了好友，更新好友列表
             self.allContacts[msg.sender] = nickName[0]
             self.sendTextMsg(f"Hi {nickName[0]}，我自动通过了你的好友请求。", msg.sender)
+    
+    def runPendingJobs(self) -> None:
+        schedule.run_pending()
 

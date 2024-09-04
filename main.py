@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import asyncio
 import os
 import signal
 from argparse import ArgumentParser
@@ -9,7 +10,7 @@ from robot import Robot, __version__
 from wcferry import Wcf
 
 
-def main(chat_type: int = 3):
+async def main(chat_type: int = 3):
     wcf = Wcf(debug=True)
     print("here")
     def handler(sig, frame):
@@ -18,7 +19,7 @@ def main(chat_type: int = 3):
 
     signal.signal(signal.SIGINT, handler)
 
-    robot = Robot(wcf, chat_type)
+    robot = Robot(wcf)
     robot.LOG.info(f"WeChatRobot【{__version__}】成功启动···")
 
     # 机器人启动发送测试消息
@@ -26,7 +27,7 @@ def main(chat_type: int = 3):
 
     # 接收消息
     # robot.enableRecvMsg()     # 可能会丢消息？
-    robot.enableReceivingMsg()  # 加队列
+    await robot.enableReceivingMsg()  # 加队列
 
     # 让机器人一直跑
     robot.keepRunningAndBlockProcess()
@@ -36,7 +37,7 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     # parser.add_argument('-c', type=int, default=0, help=f'选择模型参数序号: {ChatType.help_hint()}')
     # args = parser.parse_args().c
-    main()
+    asyncio.run(main())
  
     # root = r"C:\Mine\project\DN-AI\DN_AI\lib\site-packages\wcferry"
     # cmd = fr'"{root}\wcf.exe" start 10086 debug'

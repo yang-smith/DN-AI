@@ -1,6 +1,6 @@
 import logging
 import queue
-
+from memory.prompt.prompt import system_prompt_memory
 logging.basicConfig(filename='sessions.log', level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class Sessions:
@@ -12,7 +12,7 @@ class Sessions:
     def add_message(self, id, message):
         if id not in self.sessions:
             self.sessions[id] = {
-                "system_message": {"role": "system", "content": "You are a helpful assistant."},
+                "system_message": {"role": "system", "content": system_prompt_memory},
                 "user_messages": queue.Queue(maxsize=self.maxsize)
             }
             logging.info("Created new session for ID {}".format(id))

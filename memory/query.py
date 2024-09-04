@@ -35,22 +35,23 @@ async def query(id, user_input, graph, model='gpt-4o-2024-08-06'):
     print(f"{round((time_end - time_start).total_seconds(), 2)}s") 
 
     time_start = datetime.now()  
+    messages = memory.base_sessions.get_messages(id)
     prompt = prompt_memory.format(user_input=user_input,memory_graph=info, memory_chunk=contents)
-    messages = memory.base_sessions.get_messages(id = '0')
     messages.append({"role": "user",
             "content": prompt,})
     message = {
             "role": "user",
             "content": user_input,
         }
-    memory.base_sessions.add_message('0', message)
+    memory.base_sessions.add_message(id, message)
+    print(messages)
     results = lib.ai.ai_long_chat(messages,model)
     print('AI： \n '+ results)
     message = {
         "role": "assistant",
         "content": results,
     }
-    memory.base_sessions.add_message('0', message)
+    memory.base_sessions.add_message(id, message)
     time_end = datetime.now() 
     print(f"{round((time_end - time_start).total_seconds(), 2)}s") 
     
