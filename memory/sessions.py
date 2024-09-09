@@ -36,7 +36,14 @@ class Sessions:
                 combined_messages.append(session["system_message"])
             combined_messages.extend(list(session["user_messages"].queue))
         else:
-            logging.warning("No session found for ID {}".format(id))
+            self.sessions[id] = {
+                "system_message": {"role": "system", "content": system_prompt_memory},
+                "user_messages": queue.Queue(maxsize=self.maxsize)
+            }
+            logging.info("Created new session for ID {}".format(id))
+            session = self.sessions[id]
+            combined_messages.append(session["system_message"])
+        
         return combined_messages
 
 if __name__ == "__main__":
