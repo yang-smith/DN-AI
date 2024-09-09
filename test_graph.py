@@ -276,7 +276,7 @@ async def ask(graph, vecdb):
         if user_input == "exit":
             break
 
-        results =await query('0',user_input,graph, model='claude-3-5-sonnet-20240620')
+        results =await query('0',user_input,graph, model='gpt-4o-2024-08-06')
         # time_start = datetime.now()  
         # info = await find_related_entities(query=user_input,vecdb=vecdb, graph=graph)
         # print(info)
@@ -321,22 +321,22 @@ async def main():
 
 if __name__ == '__main__':
 
-    # asyncio.run(main())
+    asyncio.run(main())
 
-    file_path = "./graphtest.graphml"
-    if os.path.exists(file_path):
-        results = nx.read_graphml(file_path)
-        print(f"成功读取图形文件：{file_path}")
-        # 假设 'results' 是您之前得到的 NetworkX 图
-        clustered_graph, partition = apply_leiden_clustering(results)
+    # file_path = "./graphtest.graphml"
+    # if os.path.exists(file_path):
+    #     results = nx.read_graphml(file_path)
+    #     print(f"成功读取图形文件：{file_path}")
+    #     # 假设 'results' 是您之前得到的 NetworkX 图
+    #     clustered_graph, partition = apply_leiden_clustering(results)
 
-        # 打印一些聚类结果
-        print(f"发现的社区数量: {len(partition)}")
-        print(f"模块度: {partition.quality()}")
+    #     # 打印一些聚类结果
+    #     print(f"发现的社区数量: {len(partition)}")
+    #     print(f"模块度: {partition.quality()}")
 
-        # 您可以遍历节点查看它们的社区分配
-        # for node in clustered_graph.nodes(data=True):
-        #     print(f"节点 {node[0]} 属于社区 {node[1]['community']}")
+    #     # 您可以遍历节点查看它们的社区分配
+    #     # for node in clustered_graph.nodes(data=True):
+    #     #     print(f"节点 {node[0]} 属于社区 {node[1]['community']}")
 
-        # visualize_communities(clustered_graph)
-        print_all_communities_info(clustered_graph)
+    #     # visualize_communities(clustered_graph)
+    #     print_all_communities_info(clustered_graph)

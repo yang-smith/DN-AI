@@ -1,4 +1,3 @@
-
 from datetime import datetime
 import os
 import memory.vector_db
@@ -19,23 +18,30 @@ async def query(id, user_input, graph, model='gpt-4o-2024-08-06'):
 
     time_start = datetime.now()  
 
+    messages = memory.base_sessions.get_messages(id)
+
+    #这里或许需要用AI做需求判断
+    user_messages = [message["content"] for message in messages if message["role"] == "user"]
+    user_messages.append(user_input)
+    query_string = "\n".join(user_messages)
+    
     vecdb = memory.entities_db
-    info = await find_related_entities(query=user_input,vecdb=vecdb, graph=graph)
-    print(info)
+    info = await find_related_entities(query=query_string,vecdb=vecdb, graph=graph)
+    # print(info)
 
     db = memory.docs_DB
-    docs = db.query(user_input)
+    docs = db.query(query_string)
     contents = ''
     for content in docs['documents'][0]:
         contents += content
-    print(docs)
+    # print(docs)
     # print(contents)
 
     time_end = datetime.now() 
     print(f"{round((time_end - time_start).total_seconds(), 2)}s") 
 
     time_start = datetime.now()  
-    messages = memory.base_sessions.get_messages(id)
+   
     prompt = prompt_memory.format(user_input=user_input,memory_graph=info, memory_chunk=contents)
     messages.append({"role": "user",
             "content": prompt,})
