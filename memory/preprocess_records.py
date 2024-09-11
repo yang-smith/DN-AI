@@ -130,6 +130,28 @@ from lib.ai import ai_chat, ai_chat_async
 
 #     return
     
+async def summarize_month(daily_texts, year, month, output_dir='./summarize_results'):
+    # 确保输出目录存在
+    os.makedirs(output_dir, exist_ok=True)
+
+    start_date = date(year, month, 1)
+    end_date = date(year, month, calendar.monthrange(year, month)[1])
+
+    results = []
+
+    for current_date in (start_date + timedelta(n) for n in range((end_date - start_date).days + 1)):
+        if current_date in daily_texts:
+            records = daily_texts[current_date]
+            prompt = prompt_split(records)
+            result = await ai_chat_async(prompt, 'gpt-4o-mini')
+            results.append(f"\n\n{result}\n\n")
+
+    # 将结果写入文件
+    output_file = os.path.join(output_dir, f"summarize_{year}_{month:02d}.txt")
+    with open(output_file, 'w', encoding='utf-8') as f:
+        f.write("\n".join(results))
+
+    print(f"summarize for {year}-{month:02d} completed. Results saved to {output_file}")
 
 
 async def analyze_month(daily_texts, year, month, output_dir='./analysis_results'):
@@ -200,12 +222,20 @@ async def main():
     # 指定要分析的年份和月份
     year = 2024
     month = 6
+    # records = daily_texts.get(date(2024, 7, 16))
 
-    await analyze_month(daily_texts, year, month)
-    # 合并月度分析
-    analysis_file = f'./analysis_results/analysis_{year}_{month:02d}.txt'
-    merged_analysis = await merge_monthly_analysis(analysis_file)
-    print("Final merged analysis:", merged_analysis)
+    # prompt = prompt_split(records)
+    # # print(prompt)
+    # result = ai_chat(prompt, 'gpt-4o-mini')
+    # print(result)
+
+    await summarize_month(daily_texts, year, month)
+
+    # await analyze_month(daily_texts, year, month)
+    # # 合并月度分析
+    # analysis_file = f'./analysis_results/analysis_{year}_{month:02d}.txt'
+    # merged_analysis = await merge_monthly_analysis(analysis_file)
+    # print("Final merged analysis:", merged_analysis)
 
 if __name__ == "__main__":
     asyncio.run(main())

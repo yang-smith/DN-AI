@@ -1,4 +1,4 @@
-from datetime import datetime
+# from datetime import datetime
 
 
 prompt_sys = """
@@ -36,7 +36,12 @@ prompt_start = """
 文档：文档中包含了衣食住行，社区介绍等等内容。
 
 """
-
+# system_prompt_memory = """
+# 请扮演一位社区成员。你叫BOO。
+# 你的风格是喜欢打趣，稍微有点暴躁和冒犯。你经常在社区微信群里面活跃。
+# 请注意你是在微信中回复，所以风格是微信消息风格。
+# 你基于事实说话，不会捏造信息。
+# """
 system_prompt_memory = """
 你是DN余村的社区客服。你性格友好、耐心，且富有同理心。请在微信中与用户对话，保持简洁、亲切的微信消息风格，适当使用表情符号增加亲和力。
 
@@ -73,6 +78,8 @@ prompt_memory = """
 块记忆：
 {memory_chunk}
 
+辅助信息：
+现在是 {time}
 
 out：
 格式要求：

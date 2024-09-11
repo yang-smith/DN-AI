@@ -46,6 +46,17 @@ class Sessions:
         
         return combined_messages
 
+    def set_system_message(self, id, system_message):
+        if id not in self.sessions:
+            self.sessions[id] = {
+                "system_message": {"role": "system", "content": system_message},
+                "user_messages": queue.Queue(maxsize=self.maxsize)
+            }
+            logging.info("Created new session for ID {}".format(id))
+        else:
+            self.sessions[id]["system_message"] = {"role": "system", "content": system_message}
+        logging.info("Set system message for ID {}: {}".format(id, system_message))
+
 if __name__ == "__main__":
     # 使用示例
     sessions = Sessions(maxsize=3)

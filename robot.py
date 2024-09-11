@@ -14,6 +14,8 @@ from wcferry import Wcf, WxMsg
 from lib.func_chatgpt import ChatGPT
 from memory.query import query
 import memory
+import agents.baishi as baishi
+import agents.customer_services as customer_services
 # from job_mgmt import Job
 
 __version__ = "39.0.10.1"
@@ -28,7 +30,8 @@ class Robot():
         self.LOG = logging.getLogger("Robot")
         self.wxid = self.wcf.get_self_wxid()
         self.allContacts = self.getAllContacts()
-        self.chat = ChatGPT()
+        self.customer_services_agent = customer_services.CustomerServices()
+        self.baishi_agent = baishi.Baishi()
 
     @staticmethod
     def value_check(args: dict) -> bool:
@@ -51,8 +54,8 @@ class Robot():
         else: 
             q = re.sub(r"@.*?[\u2005|\s]", "", msg.content).replace(" ", "")
             # rsp = self.chat.get_answer(q, (msg.roomid if msg.from_group() else msg.sender))
-            rsp = await query((msg.roomid if msg.from_group() else msg.sender),q,memory.base_graph, model='gpt-4o-2024-08-06')
-
+            # rsp = await query((msg.roomid if msg.from_group() else msg.sender),q,memory.base_graph, model='gpt-4o-2024-08-06')
+            rsp = await customer_services_agent.query((msg.roomid if msg.from_group() else msg.sender), q)
         if rsp:
             if msg.from_group():
                 self.sendTextMsg(rsp, msg.roomid, msg.sender)
@@ -82,6 +85,13 @@ class Robot():
             if msg.is_at(self.wxid):  # 被@
                 await self.toChitchat(msg)
 
+            if msg.content.startswith("百事通"):
+                rsp = await self.baishi_agent.query(msg.roomid, msg.content)
+                if rsp:
+                    if msg.from_group():
+                        self.sendTextMsg(rsp, msg.roomid, msg.sender)
+                    else:
+                        self.sendTextMsg(rsp, msg.sender)
             # else:  # 其他消息
             #     # add to msg deque
             #     self.sendTextMsg("aha", msg.roomid, msg.sender)

@@ -1,6 +1,5 @@
 from datetime import datetime
 import os
-import memory.vector_db
 import asyncio
 from typing import List, Dict, Set, Tuple
 from collections import defaultdict
@@ -11,59 +10,67 @@ import networkx as nx
 
 
 
-async def query(id, user_input, graph, model='gpt-4o-2024-08-06'):
+from datetime import datetime
 
-    if user_input == "exit":
-        return
+# async def query(id, user_input, graph, model='gpt-4o-2024-08-06', entities_db = memory.entities_db, db = memory.docs_DB):
 
-    time_start = datetime.now()  
+#     if user_input == "exit":
+#         return
 
-    messages = memory.base_sessions.get_messages(id)
+#     time_start = datetime.now()  
 
-    #这里或许需要用AI做需求判断
-    user_messages = [message["content"] for message in messages if message["role"] == "user"]
-    user_messages.append(user_input)
-    query_string = "\n".join(user_messages)
-    
-    vecdb = memory.entities_db
-    info = await find_related_entities(query=query_string,vecdb=vecdb, graph=graph)
-    # print(info)
+#     messages = memory.base_sessions.get_messages(id)
 
-    db = memory.docs_DB
-    docs = db.query(query_string)
-    contents = ''
-    for content in docs['documents'][0]:
-        contents += content
-    # print(docs)
-    # print(contents)
-
-    time_end = datetime.now() 
-    print(f"{round((time_end - time_start).total_seconds(), 2)}s") 
-
-    time_start = datetime.now()  
-   
-    prompt = prompt_memory.format(user_input=user_input,memory_graph=info, memory_chunk=contents)
-    messages.append({"role": "user",
-            "content": prompt,})
-    message = {
-            "role": "user",
-            "content": user_input,
-        }
-    memory.base_sessions.add_message(id, message)
-    print(messages)
-    results = lib.ai.ai_long_chat(messages,model)
-    print('AI： \n '+ results)
-    message = {
-        "role": "assistant",
-        "content": results,
-    }
-    memory.base_sessions.add_message(id, message)
-    time_end = datetime.now() 
-    print(f"{round((time_end - time_start).total_seconds(), 2)}s") 
+#     #这里或许需要用AI做需求判断
+#     user_messages = [message["content"] for message in messages if message["role"] == "user"]
+#     user_messages.append(user_input)
+#     query_string = "\n".join(user_messages)
     
     
+#     info = await find_related_entities(query=query_string,vecdb=entities_db, graph=graph)
+#     # print(info)
+
     
-    return results
+#     docs = db.query(query_string)
+#     contents = ''
+#     for content in docs['documents'][0]:
+#         contents += content
+#     # print(docs)
+#     # print(contents)
+
+#     time_end = datetime.now() 
+#     print(f"{round((time_end - time_start).total_seconds(), 2)}s") 
+
+#     time_start = datetime.now()  
+#     time_now = datetime.now().strftime("%Y-%m-%d %H:%M")
+#     print(time_now)
+#     prompt = prompt_memory.format(
+#         user_input=user_input,
+#         memory_graph=info, 
+#         memory_chunk=contents, 
+#         time=time_now
+#     )
+#     messages.append({"role": "user",
+#             "content": prompt,})
+#     message = {
+#             "role": "user",
+#             "content": user_input,
+#         }
+#     memory.base_sessions.add_message(id, message)
+#     print(messages)
+#     results = lib.ai.ai_long_chat(messages,model)
+#     print('AI： \n '+ results)
+#     message = {
+#         "role": "assistant",
+#         "content": results,
+#     }
+#     memory.base_sessions.add_message(id, message)
+#     time_end = datetime.now() 
+#     print(f"{round((time_end - time_start).total_seconds(), 2)}s") 
+    
+    
+    
+#     return results
 
 async def find_related_entities(
     query: str,
@@ -73,8 +80,9 @@ async def find_related_entities(
     max_token_size: int = 3000
 ):
     # 从Chroma DB中查找相关实体
-    entities = vecdb.query_entities(query, n_results=max_entities)
-    
+    all_entities = vecdb.query_entities(query, n_results=max_entities)
+    entities = [entity for entity in all_entities if entity in graph]
+
     async def get_entity_edges(graph: nx.Graph, entity: str):
         return await asyncio.to_thread(list, graph.edges(entity, data=True))
     

@@ -3,7 +3,6 @@ test
 DN_AI
 __pycache__
 chat_records.txt
-chroma
 wcf.txt
 wcf.lock
 *.txt

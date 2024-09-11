@@ -5,9 +5,9 @@ import memory.sqlite_db
 
 
 class DB:
-    def __init__(self):
-        self.sqlitedb = memory.sqlite_db.SqliteDB('documents.db')
-        self.vecdb = memory.vector_db.VectorDB()
+    def __init__(self, sqlitedb_path = "./documents.db", vecdb_path="./chroma_test"):
+        self.sqlitedb = memory.sqlite_db.SqliteDB(sqlitedb_path)
+        self.vecdb = memory.vector_db.VectorDB(vecdb_path)
     
     def insert_documents(self, documents):
         docs = []

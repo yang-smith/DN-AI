@@ -22,6 +22,9 @@ from lib.ai import ai_chat, ai_chat_async
 from memory.prompt.prompt_entities import UNTYPED_ENTITY_RELATIONSHIPS_GENERATION_PROMPT
 from tqdm.asyncio import tqdm
 
+
+import memory.vector_db
+
 logging.basicConfig(filename='graph.log', level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
@@ -226,9 +229,9 @@ class GraphExtractor:
         plt.close()
         nx.write_graphml(graph, graph_path)
 
-        import vector_db
+    def set_entities_db(self, graph, db_path='./chroma_entities'):
         node_ids = list(graph.nodes())
-        db = vector_db.VectorDB(db_path='./chroma_entities')
+        db = memory.vector_db.VectorDB(db_path)
         db.upsert_entities(node_ids)
 
 
