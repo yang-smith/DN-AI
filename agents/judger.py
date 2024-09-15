@@ -85,3 +85,7 @@ class Judger:
         if id not in self.conversations:
             self.conversations[id] = deque(maxlen=self.max_queue_size)
         self.conversations[id].append(message)
+
+    def clear_conversation(self, id):
+        if id in self.conversations:
+            del self.conversations[id]

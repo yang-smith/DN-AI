@@ -11,7 +11,6 @@ from threading import Thread
 import schedule
 from wcferry import Wcf, WxMsg
 
-from memory.query import query
 import memory
 import agents.baishi as baishi
 import agents.customer_services as customer_services
@@ -106,13 +105,16 @@ class Robot():
                         self.customer_services_agent.query(msg.roomid, msg.content, model='deepseek-chat'),
                         self.judger_agent.check(msg.roomid, msg.sender+'：'+msg.content, model='deepseek-chat')
                     )
-
+                if msg.content.startswith('核桃'):
+                    check = True
+                    
                 if rsp and check:
                     self.sendTextMsg(rsp, msg.roomid, msg.sender)
                     self.state[msg.roomid] = 'running'
                     self.judger_agent.add_conversation(msg.roomid, '核桃：'+rsp)
                 elif not check:
                     self.state[msg.roomid] = 'waiting'
+                    self.judger_agent.clear_conversation(msg.roomid)
 
             return  # 处理完群聊信息，后面就不需要处理了
 

@@ -32,6 +32,35 @@ user say now：{user_input}
 ######################
 """
 
+prompt_reset = """
+目标：
+从给定的聊天对话中提取关键词，以便在知识库中进行高效查询。
+
+背景：
+你是一个智能助手，背后连接着一个广泛的知识库。你的任务是分析对话内容，特别是最后一句话，并提取出最相关、最有价值的查询关键词。
+
+输入：
+{input2}
+
+要求：
+1. 专注于对话的最后一句话，但也要考虑整体上下文。
+2. 提取 3-9 个最相关的关键词或短语。
+4. 如果存在专有名词、技术术语或独特概念，请优先考虑。
+5. 考虑词语的重要性和相关性，而不仅仅是出现频率。
+6. 如果最后一句话是问题，请特别注意问题的核心概念。
+
+输出格式：
+直接列出关键词，每个关键词用空格分隔。不需要编号或其他额外文本。
+
+示例输出：
+机器学习 深度学习 最好用的 应用
+
+注意：
+- 保持简洁，只输出关键词。
+- 确保每个关键词都有助于在知识库中找到相关信息。
+
+"""
+
 class Baishi:
     def __init__(self, dir_path= './records_db'):
         self.system_prompt = system_prompt
@@ -57,9 +86,13 @@ class Baishi:
         query_string = "\n".join(user_messages)
         print(query_string)
         
-        info = await memory.query.find_related_entities(query=query_string,vecdb=self.entities_db, graph=self.graph)
+        query_r = lib.ai.ai_chat(prompt_reset.format(input2=query_string),'gpt-4o-mini')
+        print(query_r)
+        
+
+        info = await memory.query.find_related_entities(query=query_r,vecdb=self.entities_db, graph=self.graph)
         # print(info)
-        docs = self.db.query(query_string,threshold=320)
+        docs = self.db.query(query_r,threshold=300)
         contents = ''
         for content in docs['documents'][0]:
             contents += content
@@ -67,7 +100,7 @@ class Baishi:
         # print(contents)
 
         time_end = datetime.now() 
-        print(f"{round((time_end - time_start).total_seconds(), 2)}s") 
+        print(f"查询耗时：{round((time_end - time_start).total_seconds(), 2)}s") 
 
         time_start = datetime.now()  
         time_now = datetime.now().strftime("%Y-%m-%d %H:%M")
