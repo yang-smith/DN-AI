@@ -80,8 +80,10 @@ async def find_related_entities(
     max_token_size: int = 3000
 ):
     # 从Chroma DB中查找相关实体
-    all_entities = vecdb.query_entities(query, n_results=max_entities)
+    all_entities = vecdb.query_entities(query, n_results=max_entities, threshold=350)
+    print(all_entities)
     entities = [entity for entity in all_entities if entity in graph]
+    print(entities)
 
     async def get_entity_edges(graph: nx.Graph, entity: str):
         return await asyncio.to_thread(list, graph.edges(entity, data=True))

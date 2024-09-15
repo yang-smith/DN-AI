@@ -21,14 +21,13 @@ prompt = """
 块记忆：
 {memory_chunk}
 
-辅助信息：
-现在是 {time}
-
 out：
 格式要求：
 - 回复应该像普通的微信消息一样，使用正常文本。
 
 ######################
+# Real Data
+现在是 {time}
 user say now：{user_input}
 ######################
 """
@@ -54,12 +53,13 @@ class Baishi:
 
         user_messages = [message["content"] for message in messages if message["role"] == "user"]
         user_messages.append(user_input)
+        user_messages = user_messages[-5:]
         query_string = "\n".join(user_messages)
         print(query_string)
         
         info = await memory.query.find_related_entities(query=query_string,vecdb=self.entities_db, graph=self.graph)
         # print(info)
-        docs = self.db.query(query_string)
+        docs = self.db.query(query_string,threshold=320)
         contents = ''
         for content in docs['documents'][0]:
             contents += content

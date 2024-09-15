@@ -26,12 +26,12 @@ class MockRobot:
 
         if msg.is_at(self.wxid) or msg.content.startswith('核桃') or self.state[msg.roomid] == 'running':
             rsp, check = await asyncio.gather(
-                self.baishi_agent.query(msg.roomid, msg.content, model='deepseek-chat'),
-                self.judger_agent.check(msg.roomid, msg.sender+'：'+msg.content, model='deepseek-chat')
+                self.baishi_agent.query(msg.roomid, msg.content, model='gpt-4o'),
+                self.judger_agent.check(msg.roomid, msg.sender+'：'+msg.content, model='gpt-4o-mini')
             )
 
             if rsp and check:
-                print(f"发送消息: {rsp}")
+                print(f"发送消息: ")
                 self.state[msg.roomid] = 'running'
                 self.judger_agent.add_conversation(msg.roomid, '核桃：'+rsp)
             elif not check:

@@ -17,12 +17,12 @@ if not os.path.exists(dir_path):
     print(f"Created directory: {dir_path}")
 
 db = memory.db.DB(sqlitedb_path=f"{dir_path}/sqlite.db", vecdb_path=f"{dir_path}/chroma")
-# documents1 = memory.loader.load_all_documents()
+documents1 = memory.loader.load_all_documents()
 # documents2 = memory.loader.load_records_documents()
 # print(documents2)
 # docs1 = db.get_documents(documents=documents1)
 # docs2 = db.get_documents(documents=docs)
-# db.insert_documents(documents=documents2)
+db.insert_documents(documents=documents1)
 
 # extractor = memory.graph_extractor.GraphExtractor()
 # asyncio.run(extractor.extract_graph(docs1, file_path=f"{dir_path}/records.graphml"))
@@ -53,6 +53,6 @@ async def main():
         time_end = datetime.now() 
         print(f"{round((time_end - time_start).total_seconds(), 2)}s") 
     
-if __name__ == "__main__":
-    asyncio.run(main())
-    db.close()
+# if __name__ == "__main__":
+#     asyncio.run(main())
+#     db.close()
