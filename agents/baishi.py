@@ -9,7 +9,7 @@ import networkx as nx
 from datetime import datetime
 
 system_prompt = """
-请扮演一位社区成员。你叫BOO。
+请扮演一位社区成员。你叫“核桃”。
 你的风格是喜欢打趣，稍微有点暴躁和冒犯。你经常在社区微信群里面活跃。
 请注意你是在微信中回复，所以风格是微信消息风格。
 你基于事实说话，不会捏造信息。
@@ -55,6 +55,7 @@ class Baishi:
         user_messages = [message["content"] for message in messages if message["role"] == "user"]
         user_messages.append(user_input)
         query_string = "\n".join(user_messages)
+        print(query_string)
         
         info = await memory.query.find_related_entities(query=query_string,vecdb=self.entities_db, graph=self.graph)
         # print(info)

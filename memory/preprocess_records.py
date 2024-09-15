@@ -167,7 +167,7 @@ async def analyze_month(daily_texts, year, month, output_dir='./analysis_results
         if current_date in daily_texts:
             records = daily_texts[current_date]
             prompt = prompt_analyze_dig(records)
-            result = await ai_chat_async(prompt, 'gpt-4o-mini')
+            result = await ai_chat_async(prompt, 'deepseek-chat')
             results.append(f"Date: {current_date}\n\n{result}\n\n{'='*50}\n")
         else:
             results.append(f"Date: {current_date}\n\nNo data available for this date.\n\n{'='*50}\n")
@@ -213,6 +213,23 @@ async def merge_monthly_analysis(file_path, output_dir='./analysis_results'):
 
     return final_analysis
 
+def write_monthly_records_to_file(daily_texts, year, month, output_dir='./monthly_records'):
+    os.makedirs(output_dir, exist_ok=True)
+
+    # 获取指定月份的开始日期和结束日期
+    start_date = date(year, month, 1)
+    end_date = date(year, month, calendar.monthrange(year, month)[1])
+
+    # 准备输出文件
+    output_file = os.path.join(output_dir, f"records_{year}_{month:02d}.txt")
+
+    with open(output_file, 'w', encoding='utf-8') as f:
+        for current_date in (start_date + timedelta(n) for n in range((end_date - start_date).days + 1)):
+            if current_date in daily_texts:
+                f.write(daily_texts[current_date])
+    print(f"Monthly records for {year}-{month:02d} have been written to {output_file}")
+
+
 # 修改 main 函数
 async def main():
     file_path = './DNbase.xlsx'
@@ -229,7 +246,11 @@ async def main():
     # result = ai_chat(prompt, 'gpt-4o-mini')
     # print(result)
 
-    await summarize_month(daily_texts, year, month)
+    write_monthly_records_to_file(daily_texts, year, month)
+    write_monthly_records_to_file(daily_texts, year, 7)
+    write_monthly_records_to_file(daily_texts, year, 8)
+    write_monthly_records_to_file(daily_texts, year, 9)
+    # await summarize_month(daily_texts, year, month)
 
     # await analyze_month(daily_texts, year, month)
     # # 合并月度分析

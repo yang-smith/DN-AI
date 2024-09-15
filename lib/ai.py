@@ -12,7 +12,7 @@ import asyncio
 limiter = AsyncLimiter(4, 1)  # 每秒最多4个请求
 
 async def ai_chat_async(message, model="gpt-4o-mini", response_format='NOT_GIVEN', retries=3):
-    timeout = httpx.Timeout(20.0, read=30.0)  
+    timeout = httpx.Timeout(20.0, read=50.0)  
     async with httpx.AsyncClient(timeout=timeout) as client:
         messages = [
             {"role": "system", "content": "You are a helpful assistant."},

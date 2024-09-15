@@ -32,8 +32,15 @@ class SqliteDB:
         """
         try:
             cursor = self.conn.cursor()
+            if isinstance(document, dict):
+                content = document.get('page_content', '')
+                metadata = json.dumps(document.get('metadata', {}))
+            else:
+                content = document.page_content
+                metadata = json.dumps(document.metadata)
+            
             cursor.execute('INSERT INTO documents (content, metadata) VALUES (?, ?)',
-                            (document.page_content, json.dumps(document.metadata)))
+                            (content, metadata))
             self.conn.commit()
             return cursor.lastrowid
         except sqlite3.Error as e:

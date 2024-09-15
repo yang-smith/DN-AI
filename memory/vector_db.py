@@ -7,7 +7,7 @@ from chromadb.utils import embedding_functions
 import json
 
 class VectorDB:
-    def __init__(self, db_path="./chroma_test", collection_name = 'collection'):
+    def __init__(self, db_path, collection_name = 'collection'):
         self.em = embedding_functions.SentenceTransformerEmbeddingFunction(model_name="shibing624/text2vec-base-chinese")
         self.client = chromadb.PersistentClient(db_path)
         self.collection = self.init_collections(collection_name)
@@ -21,11 +21,18 @@ class VectorDB:
         return collection
 
     def upsert_document(self, document, id):
+        if isinstance(document, dict):
+            content = document.get('page_content', '')
+            metadata = document.get('metadata', {})
+        else:
+            content = document.page_content
+            metadata = document.metadata
+
         self.collection.upsert(
-                documents=[document.page_content],
-                metadatas=[document.metadata],
-                ids=[str(id)]
-            )
+            documents=[content],
+            metadatas=[metadata],
+            ids=[str(id)]
+        )
     def upsert_entities(self, entities):
         
         for entity in entities:

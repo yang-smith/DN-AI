@@ -11,11 +11,11 @@ from threading import Thread
 import schedule
 from wcferry import Wcf, WxMsg
 
-from lib.func_chatgpt import ChatGPT
 from memory.query import query
 import memory
 import agents.baishi as baishi
 import agents.customer_services as customer_services
+import agents.judger as judger
 # from job_mgmt import Job
 
 __version__ = "39.0.10.1"
@@ -32,6 +32,9 @@ class Robot():
         self.allContacts = self.getAllContacts()
         self.customer_services_agent = customer_services.CustomerServices()
         self.baishi_agent = baishi.Baishi()
+        self.judger_agent = judger.Judger()
+        self.type = 'baishi'
+        self.state = {}
 
     @staticmethod
     def value_check(args: dict) -> bool:
@@ -49,13 +52,12 @@ class Robot():
     async def toChitchat(self, msg: WxMsg) -> bool:
         """闲聊，接入 ChatGPT
         """
-        if not self.chat: 
-            rsp = "你@我干嘛？"
-        else: 
+        try:
             q = re.sub(r"@.*?[\u2005|\s]", "", msg.content).replace(" ", "")
-            # rsp = self.chat.get_answer(q, (msg.roomid if msg.from_group() else msg.sender))
-            # rsp = await query((msg.roomid if msg.from_group() else msg.sender),q,memory.base_graph, model='gpt-4o-2024-08-06')
-            rsp = await customer_services_agent.query((msg.roomid if msg.from_group() else msg.sender), q)
+            rsp = await self.customer_services_agent.query((msg.roomid if msg.from_group() else msg.sender), q)
+        except Exception as e:
+            self.LOG.error(f"Error in toChitchat: {e}")
+        
         if rsp:
             if msg.from_group():
                 self.sendTextMsg(rsp, msg.roomid, msg.sender)
@@ -81,20 +83,36 @@ class Robot():
             # 如果在群里被 @
             # if msg.roomid not in self.config.GROUPS:  # 不在配置的响应的群列表里，忽略
             #     return
+            if msg.content.startswith('核桃，切换成小客服模式'):
+                self.type = 'customer_services'
+                self.sendTextMsg('小客服模式已开启', msg.roomid, msg.sender)
+                return
+            if msg.content.startswith('核桃，切换成核桃模式'):
+                self.type = 'baishi'
+                self.sendTextMsg('核桃模式已开启', msg.roomid, msg.sender)
+                return
 
-            if msg.is_at(self.wxid):  # 被@
-                await self.toChitchat(msg)
+            if msg.roomid not in self.state:
+                self.state[msg.roomid] = 'waiting'
 
-            if msg.content.startswith("百事通"):
-                rsp = await self.baishi_agent.query(msg.roomid, msg.content)
-                if rsp:
-                    if msg.from_group():
-                        self.sendTextMsg(rsp, msg.roomid, msg.sender)
-                    else:
-                        self.sendTextMsg(rsp, msg.sender)
-            # else:  # 其他消息
-            #     # add to msg deque
-            #     self.sendTextMsg("aha", msg.roomid, msg.sender)
+            if msg.is_at(self.wxid) or msg.content.startswith('核桃') or self.state[msg.roomid] == 'running':
+                if self.type == 'baishi':
+                    rsp, check = await asyncio.gather(
+                        self.baishi_agent.query(msg.roomid, msg.content, model='deepseek-chat'),
+                        self.judger_agent.check(msg.roomid, msg.sender+'：'+msg.content, model='deepseek-chat')
+                    )
+                elif self.type == 'customer_services':
+                    rsp, check = await asyncio.gather(
+                        self.customer_services_agent.query(msg.roomid, msg.content, model='deepseek-chat'),
+                        self.judger_agent.check(msg.roomid, msg.sender+'：'+msg.content, model='deepseek-chat')
+                    )
+
+                if rsp and check:
+                    self.sendTextMsg(rsp, msg.roomid, msg.sender)
+                    self.state[msg.roomid] = 'running'
+                    self.judger_agent.add_conversation(msg.roomid, '核桃：'+rsp)
+                elif not check:
+                    self.state[msg.roomid] = 'waiting'
 
             return  # 处理完群聊信息，后面就不需要处理了
 
@@ -112,7 +130,12 @@ class Robot():
                     self.config.reload()
                     self.LOG.info("已更新")
             else:
-                await self.toChitchat(msg)  # 闲聊
+                if msg.content.startswith("核桃"):
+                    rsp = await self.baishi_agent.query(msg.roomid, msg.content)
+                    if rsp:
+                        self.sendTextMsg(rsp, msg.sender)
+                else:
+                    await self.toChitchat(msg)
 
     def onMsg(self, msg: WxMsg) -> int:
         try:
@@ -157,7 +180,7 @@ class Robot():
                 wxids = at_list.split(",")
                 for wxid in wxids:
                     # 根据 wxid 查找群昵称
-                    ats += f" @{self.wcf.get_alias_in_chatroom(wxid, receiver)}"
+                    ats += f"{self.wcf.get_alias_in_chatroom(wxid, receiver)}"
 
         # {msg}{ats} 表示要发送的消息内容后面紧跟@，例如 北京天气情况为：xxx @张三
         if ats == "":
@@ -165,7 +188,7 @@ class Robot():
             self.wcf.send_text(f"{msg}", receiver, at_list)
         else:
             self.LOG.info(f"To {receiver}: {ats}\r{msg}")
-            self.wcf.send_text(f"{ats}\n\n{msg}", receiver, at_list)
+            self.wcf.send_text(f"{ats}, {msg}", receiver, at_list)
 
     def getAllContacts(self) -> dict:
         """

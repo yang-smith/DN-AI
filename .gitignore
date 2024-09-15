@@ -13,3 +13,5 @@ wcf.lock
 *.graphml
 *.log
 logs
+venv
+.wcf.lock

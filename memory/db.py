@@ -14,10 +14,19 @@ class DB:
         for doc in documents:
             try: 
                 id = self.sqlitedb.insert_document(doc)
+                print(id)
                 self.vecdb.upsert_document(doc, id)
                 docs.append({'id':id, 'page_content': doc.page_content})
             except:
                 print("add documents error")
+        return docs
+
+    def insert_documents_test(self, documents):
+        docs = []
+        for doc in documents:
+            id = self.sqlitedb.insert_document(doc)
+            print(id)
+            self.vecdb.upsert_document(doc, id)
         return docs
 
     def get_documents(self, documents):
@@ -25,14 +34,14 @@ class DB:
         for i, doc in enumerate(documents):
             try: 
                 id = i +1
-                docs.append({'id':id, 'page_content': doc.page_content})
+                docs.append({'id':id, 'page_content': doc.page_content, 'metadata': doc.metadata})
             except:
-                print("add documents error")
+                print("get documents error")
         return docs
 
-    def query(self, content):
+    def query(self, content, n_results = 10, threshold = 370):
         result_sq = self.sqlitedb.query_documents_by_content_partial(content)
-        result_vec = self.vecdb.query_by_similar_search(content)
+        result_vec = self.vecdb.query_by_similar_search(content, n_results, threshold)
         
         for i, id in enumerate(result_vec['ids'][0]):
             if id not in result_sq['ids']:

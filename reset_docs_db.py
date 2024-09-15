@@ -5,11 +5,11 @@ import memory.graph_extractor
 import memory.db
 import os
 import networkx as nx
-from memory.query import query
+
 
 # 定义目录路径
-# dir_path = './records_db'
-dir_path = './customer_services_db'
+dir_path = './records_db'
+# dir_path = './customer_services_db'
 
 # 如果目录不存在，创建它
 if not os.path.exists(dir_path):
@@ -17,19 +17,22 @@ if not os.path.exists(dir_path):
     print(f"Created directory: {dir_path}")
 
 db = memory.db.DB(sqlitedb_path=f"{dir_path}/sqlite.db", vecdb_path=f"{dir_path}/chroma")
-documents = memory.loader.load_all_documents()
+# documents1 = memory.loader.load_all_documents()
+# documents2 = memory.loader.load_records_documents()
+# print(documents2)
+# docs1 = db.get_documents(documents=documents1)
+# docs2 = db.get_documents(documents=docs)
+# db.insert_documents(documents=documents2)
 
-docs = db.get_documents(documents=documents)
-db.insert_documents(documents=documents)
-extractor = memory.graph_extractor.GraphExtractor()
-asyncio.run(extractor.extract_graph(docs, file_path=f"{dir_path}/records.graphml"))
+# extractor = memory.graph_extractor.GraphExtractor()
+# asyncio.run(extractor.extract_graph(docs1, file_path=f"{dir_path}/records.graphml"))
 
-file_path = f"{dir_path}/records.graphml"
-if os.path.exists(file_path):
-    graph = nx.read_graphml(file_path)
-    extractor.set_entities_db(graph, f"{dir_path}/entities")
+# file_path = f"{dir_path}/records.graphml"
+# if os.path.exists(file_path):
+#     graph = nx.read_graphml(file_path)
+#     extractor.set_entities_db(graph, f"{dir_path}/entities")
 
-db.close()
+# db.close()
 
 async def main():
     while True:
@@ -50,6 +53,6 @@ async def main():
         time_end = datetime.now() 
         print(f"{round((time_end - time_start).total_seconds(), 2)}s") 
     
-# if __name__ == "__main__":
-#     asyncio.run(main())
-#     db.close()
+if __name__ == "__main__":
+    asyncio.run(main())
+    db.close()
