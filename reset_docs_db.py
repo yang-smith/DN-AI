@@ -17,22 +17,24 @@ if not os.path.exists(dir_path):
     print(f"Created directory: {dir_path}")
 
 db = memory.db.DB(sqlitedb_path=f"{dir_path}/sqlite.db", vecdb_path=f"{dir_path}/chroma")
-documents1 = memory.loader.load_all_documents()
+# documents1 = memory.loader.load_ac_records_documents()
+documents1 = memory.loader.load_summarize_documents()
+# print(documents1)
 # documents2 = memory.loader.load_records_documents()
 # print(documents2)
-# docs1 = db.get_documents(documents=documents1)
+docs1 = db.get_documents(documents=documents1)
 # docs2 = db.get_documents(documents=docs)
-db.insert_documents(documents=documents1)
+# db.insert_documents(documents=documents1)
 
-# extractor = memory.graph_extractor.GraphExtractor()
-# asyncio.run(extractor.extract_graph(docs1, file_path=f"{dir_path}/records.graphml"))
+extractor = memory.graph_extractor.GraphExtractor()
+asyncio.run(extractor.extract_graph(docs1, file_path=f"{dir_path}/records.graphml"))
 
-# file_path = f"{dir_path}/records.graphml"
-# if os.path.exists(file_path):
-#     graph = nx.read_graphml(file_path)
-#     extractor.set_entities_db(graph, f"{dir_path}/entities")
+file_path = f"{dir_path}/records.graphml"
+if os.path.exists(file_path):
+    graph = nx.read_graphml(file_path)
+    extractor.set_entities_db(graph, f"{dir_path}/entities")
 
-# db.close()
+db.close()
 
 async def main():
     while True:

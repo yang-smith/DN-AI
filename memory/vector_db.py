@@ -62,23 +62,35 @@ class VectorDB:
 
         return filtered_ids
             
-    def get_records_by_time(self, collection, start, end):
-        collection = self.collection if collection == "chat_collection" else self.collection_DN
-        start_timestamp = int(datetime.strptime(start, "%Y-%m-%d").timestamp())
-        end_timestamp = int(datetime.strptime(end, "%Y-%m-%d").timestamp())
-        if (end_timestamp - start_timestamp) > 86400 * 2:
-            return "查询日期范围太长了"
-        if start_timestamp == end_timestamp:
-            end_timestamp += 86400
+    def query_records_by_time(self, start, end, user_input, n_results=10, threshold=370):
 
-        results = collection.get(where={'$and': [{'timestamp': {"$gte": start_timestamp}}, {'timestamp': {"$lte": end_timestamp}}]})
-        formatted_output = ""
-        for i in range(len(results['ids'])):
-            date_time = datetime.fromtimestamp(results['metadatas'][i]['timestamp']).strftime('%Y-%m-%d %H:%M:%S')
-            speaker = results['metadatas'][i]['speaker']
-            document = results['documents'][i]
-            formatted_output += f"{date_time} {speaker}\n{document}\n\n"
-        return formatted_output
+        # if (end_timestamp - start_timestamp) > 86400 * 2:
+        #     return "查询日期范围太长了"
+        if start == end:
+            end += 86400
+
+        results = self.collection.query(query_texts=[user_input], n_results=n_results, 
+                                        where={'$and': [{'timestamp': {"$gte": start}}, {'timestamp': {"$lte": end}}]})
+        filtered_ids = []
+        filtered_distances = []
+        filtered_metadatas = []
+        filtered_documents = []
+
+        for i, distance in enumerate(results['distances'][0]):
+            if distance < threshold:
+                filtered_ids.append(results['ids'][0][i])
+                filtered_distances.append(distance)
+                filtered_metadatas.append(results['metadatas'][0][i])
+                filtered_documents.append(results['documents'][0][i])
+
+        filtered_results = {
+            'ids': [filtered_ids],
+            'distances': [filtered_distances],
+            'metadatas': [filtered_metadatas],
+            'documents': [filtered_documents]
+        }
+
+        return filtered_results
 
     def query_by_similar_search(self, user_input, n_results=10, threshold=370):
         results = self.collection.query(query_texts=[user_input], n_results=n_results)

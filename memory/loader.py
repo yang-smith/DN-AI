@@ -1,6 +1,10 @@
 from langchain_community.document_loaders import DirectoryLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter, CharacterTextSplitter
 import os
+from langchain_core.documents import Document
+from typing import List, Dict
+import re
+from datetime import datetime
 
 source_urls = {
     'base.md': 'https://docs.qq.com/doc/DZGllZ1h5UU1ITlZk',
@@ -75,15 +79,12 @@ def load_all_documents(path_records='./summarize_results', chunk_size=300, sourc
     texts.extend(docs)
     return texts
 
-def clean_timestamp(timestamp):
-    """清理时间戳中的换行符和多余空格"""
-    return re.sub(r'\s+', ' ', timestamp).strip()
-
-def custom_split_records(text, metadata):
-    pattern = r'\[(\d{4}\s*\n*\s*\d{2}\s*\n*\s*\d{2}\s*\d{2}:\d{2}:\d{2})\](.*?)(?=\[\d{4}|$)'
-    matches = re.findall(pattern, text, re.DOTALL)
-    return [Document(page_content=f'[{clean_timestamp(timestamp)}]{content.strip()}', metadata=metadata) for timestamp, content in matches]
-
+def clean_content(content: str) -> str:
+    # 移除所有的时间戳
+    cleaned = re.sub(r'\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\] ', '', content)
+    # 移除多余的换行符
+    cleaned = re.sub(r'\n+', '\n', cleaned)
+    return cleaned.strip()
 
 def load_records_documents(path='./monthly_records', chunk_size=300):
     """加载monthly_records目录下所有txt文件，并进行分割。返回List[Document] """
@@ -104,3 +105,56 @@ def load_records_documents(path='./monthly_records', chunk_size=300):
 
     texts = text_splitter.split_documents(docs)
     return texts
+
+def load_ac_records_documents(path: str = './monthly_records', chunk_size=80) -> List[Document]:
+    documents = []
+    for filename in os.listdir(path):
+        if filename.endswith('.txt'):
+            file_path = os.path.join(path, filename)
+            
+            with open(file_path, 'r', encoding='utf-8') as file:
+                lines = file.readlines()
+            
+            current_doc = ""
+            current_timestamp = ""
+            timestamp_pattern = r'\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]'
+            
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+                
+                timestamp_match = re.match(timestamp_pattern, line)
+                if timestamp_match:
+                    timestamp = timestamp_match.group(1)
+                    content = line[len(timestamp_match.group(0)):].strip()
+                    
+                    if len(current_doc) + len(content) + 1 > chunk_size:
+                        if current_doc:
+                            timestamp_int = int(datetime.strptime(current_timestamp, "%Y-%m-%d %H:%M:%S").timestamp())
+                            documents.append(Document(page_content=current_doc.strip(), metadata={'timestamp': timestamp_int}))
+                        current_doc = content + "\n"
+                        current_timestamp = timestamp
+                    else:
+                        if not current_doc:
+                            current_timestamp = timestamp
+                        current_doc += content + "\n"
+                else:
+                    if len(current_doc) + len(line) + 1 > chunk_size:
+                        if current_doc:
+                            timestamp_int = int(datetime.strptime(current_timestamp, "%Y-%m-%d %H:%M:%S").timestamp())
+                            documents.append(Document(page_content=current_doc.strip(), metadata={'timestamp': timestamp_int}))
+                        current_doc = line + "\n"
+                    else:
+                        current_doc += line + "\n"
+            
+            if current_doc:
+                timestamp_int = int(datetime.strptime(current_timestamp, "%Y-%m-%d %H:%M:%S").timestamp())
+                documents.append(Document(page_content=current_doc.strip(), metadata={'timestamp': timestamp_int}))
+    
+    cleaned_documents = []
+    for doc in documents:
+        cleaned_content = clean_content(doc.page_content)
+        cleaned_documents.append(Document(page_content=cleaned_content, metadata=doc.metadata))
+    
+    return cleaned_documents

@@ -39,6 +39,23 @@ class DB:
                 print("get documents error")
         return docs
 
+    def query_by_time(self, start, end, user_input, n_results=10, threshold=370):
+        start_timestamp = int(datetime.strptime(start, "%Y-%m-%d").timestamp())
+        end_timestamp = int(datetime.strptime(end, "%Y-%m-%d").timestamp()) 
+        
+        result_sq = self.sqlitedb.query_documents_by_time_range(start_timestamp, end_timestamp, user_input)
+        result_vec = self.vecdb.query_records_by_time(start_timestamp, end_timestamp, user_input, n_results, threshold)
+        print(result_vec)
+
+        for i, id in enumerate(result_vec['ids'][0]):
+            if id not in result_sq['ids']:
+                result_sq['ids'][0].append(id)
+                result_sq['distances'][0].append(result_vec['distances'][0][i])
+                result_sq['metadatas'][0].append(result_vec['metadatas'][0][i])
+                result_sq['documents'][0].append(result_vec['documents'][0][i])
+
+        return result_sq
+
     def query(self, content, n_results = 10, threshold = 370):
         result_sq = self.sqlitedb.query_documents_by_content_partial(content)
         result_vec = self.vecdb.query_by_similar_search(content, n_results, threshold)

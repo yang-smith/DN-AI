@@ -1,5 +1,6 @@
 import json
 import sqlite3
+from datetime import datetime
 
 class SqliteDB:
     def __init__(self, db_path):
@@ -89,7 +90,52 @@ class SqliteDB:
         except sqlite3.Error as e:
             print(f"Error querying document by partial content: {e}")
             return []
+    
+    def query_documents_by_time_range(self, start_time, end_time, partial_content=None, n_results=10):
+        """
+        根据时间范围和可选的部分内容查询文档
+        """
+        try:
+            cursor = self.conn.cursor()
+            query = '''
+                SELECT id, content, metadata 
+                FROM documents 
+                WHERE json_extract(metadata, '$.timestamp') BETWEEN ? AND ?
+            '''
+            params = [start_time, end_time]
+
+            if partial_content:
+                query += ' AND content LIKE ?'
+                params.append(f'%{partial_content}%')
+
+            query += ' ORDER BY json_extract(metadata, "$.timestamp") DESC LIMIT ?'
+            params.append(n_results)
+
+            cursor.execute(query, params)
+            results = cursor.fetchall()
+
+            ids = []
+            distances = []
+            metadatas = []
+            contents = []
+            for row in results:
+                ids.append(row[0])
+                contents.append(row[1])
+                metadata = json.loads(row[2])
+                metadatas.append(metadata)
+                distances.append(0)  # 使用0作为占位符
+
+            return {
+                'ids': [ids],
+                'distances': [distances],
+                'metadatas': [metadatas],
+                'documents': [contents]
+            }
         
+        except sqlite3.Error as e:
+            print(f"Error querying documents by time range: {e}")
+            return {'ids': [[]], 'distances': [[]], 'metadatas': [[]], 'documents': [[]]}
+
     def clear_all_documents(self):
         """
         清空所有文档数据

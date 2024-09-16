@@ -4,7 +4,7 @@ from memory.prompt.prompt import system_prompt_memory
 logging.basicConfig(filename='sessions.log', level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class Sessions:
-    def __init__(self, maxsize=20) -> None:
+    def __init__(self, maxsize=10) -> None:
         self.sessions = {}
         self.maxsize = maxsize  
         logging.info("Initialized Sessions with maxsize {}".format(maxsize))
@@ -56,6 +56,17 @@ class Sessions:
         else:
             self.sessions[id]["system_message"] = {"role": "system", "content": system_message}
         logging.info("Set system message for ID {}: {}".format(id, system_message))
+
+    def clear_session(self, id):
+        if id in self.sessions:
+            system_message = self.sessions[id]["system_message"]
+            self.sessions[id] = {
+                "system_message": system_message,
+                "user_messages": queue.Queue(maxsize=self.maxsize)
+            }
+            logging.info(f"Cleared session for ID {id}, keeping system message")
+        else:
+            logging.warning(f"Attempted to clear non-existent session with ID {id}")
 
 if __name__ == "__main__":
     # 使用示例

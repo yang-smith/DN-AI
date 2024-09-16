@@ -56,11 +56,16 @@ async def ai_chat_async(message, model="gpt-4o-mini", response_format='NOT_GIVEN
                     raise  
 
 def ai_chat(message, model="gpt-3.5-turbo", response_format = 'NOT_GIVEN'):
-    client = OpenAI(
-        # This is the default and can be omitted
-        api_key=os.environ.get("OPENAI_API_KEY"),
-        base_url=os.environ.get("OPENAI_API_BASE"),
-    )
+    if model == 'deepseek-chat':
+        client = OpenAI(
+            api_key=os.environ.get("DEEPSEEK_API_KEY"),
+            base_url=os.environ.get("DEEPSEEK_API_BASE"),
+        )
+    else:
+        client = OpenAI(
+            api_key=os.environ.get("OPENAI_API_KEY"),
+            base_url=os.environ.get("OPENAI_API_BASE"),
+        )
     messages=[
         {
             "role": "system", 

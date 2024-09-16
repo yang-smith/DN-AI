@@ -20,6 +20,8 @@ For each pair of related entities, extract the following information:
 - relationship_strength: a numeric score indicating strength of the relationship between the source entity and target entity
  Format each relationship as ("relationship"{{tuple_delimiter}}<source_entity>{{tuple_delimiter}}<target_entity>{{tuple_delimiter}}<relationship_description>{{tuple_delimiter}}<relationship_strength>)
 
+3. Convert all time references to specific dates. Do not use relative time expressions like "明天" or "下周". If the exact date is not provided, use the most likely date based on context.
+
 3. Return output in 中文 as a single list of all the entities and relationships identified in steps 1 and 2. Use **{{record_delimiter}}** as the list delimiter. If you have to translate, just translate the descriptions, nothing else!
 
 4. When finished, output {{completion_delimiter}}

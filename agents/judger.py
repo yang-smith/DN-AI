@@ -36,7 +36,7 @@ prompt = """
 """
 
 class Judger:
-    def __init__(self, dir_path= './records_db', max_queue_size=15):
+    def __init__(self, dir_path= './records_db', max_queue_size=10):
         self.system_prompt = system_prompt
         self.prompt = prompt
         self.conversations = {}  # 新增：用于存储对话历史的字典
