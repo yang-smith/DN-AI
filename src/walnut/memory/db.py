@@ -89,7 +89,7 @@ class DB:
                 raise ValueError("Document metadata must contain 'source'")
     
             if 'timestamp' not in document.metadata:
-                document.metadata['timestamp'] = int(datetime.now().timestamp())
+                document.metadata['timestamp'] = 0
         
         return documents
 

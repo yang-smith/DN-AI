@@ -4,7 +4,7 @@ import os
 from langchain_core.documents import Document
 from typing import List, Dict
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 
 source_urls = {
     'base.md': 'https://docs.qq.com/doc/DZGllZ1h5UU1ITlZk',
@@ -87,73 +87,56 @@ def clean_content(content: str) -> str:
     return cleaned.strip()
 
 
-def load_ac_records_documents(path: str = './monthly_records', chunk_size=80) -> List[Document]:
+def load_ac_records_documents(path: str = './monthly_records', target_chars=100, max_time_diff=timedelta(minutes=20)) -> List[Document]:
     documents = []
+    timestamp_pattern = re.compile(r'\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]')
+
     for filename in os.listdir(path):
-        if filename.endswith('.txt'):
-            file_path = os.path.join(path, filename)
-            
+        if not filename.endswith('.txt'):
+            continue
+
+        file_path = os.path.join(path, filename)
+        buffer = []
+        current_timestamp = None
+
+        try:
             with open(file_path, 'r', encoding='utf-8') as file:
-                lines = file.readlines()
-            
-            current_doc = ""
-            current_timestamp = ""
-            timestamp_pattern = r'\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]'
-            
-            for line in lines:
-                line = line.strip()
-                if not line:
-                    continue
-                
-                timestamp_match = re.match(timestamp_pattern, line)
-                if timestamp_match:
-                    timestamp = timestamp_match.group(1)
-                    content = line[len(timestamp_match.group(0)):].strip()
-                    
-                    if len(current_doc) + len(content) + 1 > chunk_size:
-                        if current_doc:
-                            timestamp_int = int(datetime.strptime(current_timestamp, "%Y-%m-%d %H:%M:%S").timestamp())
-                            documents.append(Document(
-                                page_content=current_doc.strip(), 
-                                metadata={
-                                    'timestamp': timestamp_int,
-                                    'source': filename
-                                }
-                            ))
-                        current_doc = content + "\n"
-                        current_timestamp = timestamp
+                for line in file:
+                    line = line.strip()
+                    if not line:
+                        continue
+
+                    timestamp_match = timestamp_pattern.match(line)
+                    if timestamp_match:
+                        new_timestamp = datetime.strptime(timestamp_match.group(1), "%Y-%m-%d %H:%M:%S")
+                        content = clean_content(line[len(timestamp_match.group(0)):].strip())
+
+                        if current_timestamp and (len(''.join(buffer)) >= target_chars or new_timestamp - current_timestamp > max_time_diff):
+                            documents.append(create_document('\n'.join(buffer), current_timestamp, filename))
+                            buffer = []
+
+                        if not current_timestamp or new_timestamp - current_timestamp > max_time_diff:
+                            current_timestamp = new_timestamp
+
+                        buffer.append(content + '\n')  
                     else:
-                        if not current_doc:
-                            current_timestamp = timestamp
-                        current_doc += content + "\n"
-                else:
-                    if len(current_doc) + len(line) + 1 > chunk_size:
-                        if current_doc:
-                            timestamp_int = int(datetime.strptime(current_timestamp, "%Y-%m-%d %H:%M:%S").timestamp())
-                            documents.append(Document(
-                                page_content=current_doc.strip(), 
-                                metadata={
-                                    'timestamp': timestamp_int,
-                                    'source': filename
-                                }
-                            ))
-                        current_doc = line + "\n"
-                    else:
-                        current_doc += line + "\n"
-            
-            if current_doc:
-                timestamp_int = int(datetime.strptime(current_timestamp, "%Y-%m-%d %H:%M:%S").timestamp())
-                documents.append(Document(
-                    page_content=current_doc.strip(), 
-                    metadata={
-                        'timestamp': timestamp_int,
-                        'source': filename
-                    }
-                ))
-    
-    cleaned_documents = []
-    for doc in documents:
-        cleaned_content = clean_content(doc.page_content)
-        cleaned_documents.append(Document(page_content=cleaned_content, metadata=doc.metadata))
-    
-    return cleaned_documents
+                        buffer.append(clean_content(line) + '\n')  
+
+                if buffer:
+                    documents.append(create_document('\n'.join(buffer), current_timestamp, filename))
+
+        except IOError as e:
+            print(f"Error reading file {filename}: {e}")
+        except Exception as e:
+            print(f"Unexpected error processing file {filename}: {e}")
+
+    return documents
+
+def create_document(content: str, start_timestamp: datetime, filename: str) -> Document:
+    return Document(
+        page_content=content.strip(),
+        metadata={
+            'timestamp': int(start_timestamp.timestamp()),
+            'source': filename
+        }
+    )
