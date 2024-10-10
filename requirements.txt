@@ -25,3 +25,8 @@ asyncio
 igraph
 leidenalg
 aiolimiter
+pytest
+pytest-asyncio
+semchunk
+FlagEmbedding
+peft

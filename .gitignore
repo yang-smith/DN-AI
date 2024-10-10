@@ -15,3 +15,9 @@ wcf.lock
 logs
 venv
 .wcf.lock
+.pytest_cache
+
+docs
+testDB
+outputs
+logs

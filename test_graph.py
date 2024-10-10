@@ -5,7 +5,7 @@ import igraph as ig
 import leidenalg as la
 import matplotlib.pyplot as plt
 
-import memory.prompt.prompt_communities
+import walnut.memory.prompt.prompt_communities
 
 def nx_to_igraph(nx_graph):
     """将 NetworkX 图转换为 igraph 图"""
@@ -148,8 +148,8 @@ DN余村->续订房间:   入住者需提前告知客服以续订房间，确保
 
 def print_all_communities_info(graph):
     """打印所有社区的信息"""
-    import memory.prompt.prompt_communities 
-    import lib.ai
+    import walnut.memory.prompt.prompt_communities 
+    import walnut.utils.ai
     communities = set(nx.get_node_attributes(graph, 'community').values())
     i = 0
     for community_id in communities:
@@ -169,11 +169,11 @@ def print_all_communities_info(graph):
         if i > 2:
             break
 
-import memory.vector_db
+import walnut.memory.vector_db
 import asyncio
 from typing import List, Dict, Set, Tuple
 from collections import defaultdict
-from lib.ai import truncate_list_by_token_size
+from walnut.utils.ai import truncate_list_by_token_size
 
 async def find_related_entities(
     query: str,
@@ -267,9 +267,9 @@ async def find_related_edges_from_graph(
 
 
 async def ask(graph, vecdb):
-    import lib.ai
-    from memory.prompt.prompt import prompt_memory
-    from memory.query import query 
+    import walnut.utils.ai
+    from walnut.memory.prompt.prompt import prompt_memory
+    from walnut.memory.query import query 
 
     while 1:
         user_input = input("问点什么：")
